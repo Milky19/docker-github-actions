@@ -37,7 +37,6 @@ jobs:
   deploy:
     runs-on: self-hosted
     needs: scan
-
     steps:
       - name: Deploy Container
         run: |
