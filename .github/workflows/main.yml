@@ -34,7 +34,6 @@ jobs:
   scan:
     runs-on: self-hosted
     needs: build
-
   deploy:
     runs-on: self-hosted
     needs: scan
