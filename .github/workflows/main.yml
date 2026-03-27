@@ -33,8 +33,8 @@ jobs:
       - name: Push Docker Image
         run: |
           GIT_SHA=$(git rev-parse --short HEAD)
-          docker push ${{ secrets.DOCKERHUB_USERNAME }}/flask-app:$GIT_SHA
-          docker push ${{ secrets.DOCKERHUB_USERNAME }}/flask-app:latest
+          docker push hanvitha/flask-app:${GIT_SHA}
+          docker push hanvitha/flask-app:latest
 
   scan:
     name: Security Scan with Trivy
