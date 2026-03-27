@@ -3,69 +3,54 @@ name: CI/CD Pipeline
 on:
   push:
     branches:
-      - main   
+      - main
 
 jobs:
-  checkout:
-    name: Checkout & Setup
-    runs-on: self-hosted   
-    steps:
-      - name: Checkout repository
-        uses: actions/checkout@v3
-
   build:
-    name: Build & Push Image
     runs-on: self-hosted
-    needs: checkout
-    steps:
-      - name: Checkout repository
-        uses: actions/checkout@v3
 
-      - name: Log in to DockerHub
+    steps:
+      - uses: actions/checkout@v3
+
+      - name: Login to DockerHub
         run: echo "${{ secrets.DOCKERHUB_TOKEN }}" | docker login -u "${{ secrets.DOCKERHUB_USERNAME }}" --password-stdin
 
       - name: Build & Tag Docker Image
         run: |
           GIT_SHA=$(git rev-parse --short HEAD)
-          docker build -t hanvitha/flask-app .
-          docker tag hanvitha/flask-app:${GIT_SHA} hanvitha/flask-app:latest
+
+          docker build \
+            -t ${{ secrets.DOCKERHUB_USERNAME }}/flask-app:${GIT_SHA} \
+            -t ${{ secrets.DOCKERHUB_USERNAME }}/flask-app:latest \
+            .
 
       - name: Push Docker Image
         run: |
           GIT_SHA=$(git rev-parse --short HEAD)
-          docker push hanvitha/flask-app:${GIT_SHA}
-          docker push hanvitha/flask-app:latest
+
+          docker push ${{ secrets.DOCKERHUB_USERNAME }}/flask-app:${GIT_SHA}
+          docker push ${{ secrets.DOCKERHUB_USERNAME }}/flask-app:latest
 
   scan:
-    name: Security Scan with Trivy
     runs-on: self-hosted
     needs: build
-    steps:
-      - name: Install Trivy
-        run: |
-          sudo apt-get update -y
-          sudo apt-get install -y wget apt-transport-https gnupg lsb-release
-          wget -qO - https://aquasecurity.github.io/trivy-repo/deb/public.key | sudo apt-key add -
-          echo deb https://aquasecurity.github.io/trivy-repo/deb $(lsb_release -sc) main | sudo tee /etc/apt/sources.list.d/trivy.list
-          sudo apt-get update -y
-          sudo apt-get install -y trivy
 
-      - name: Scan latest Docker image
+    steps:
+      - name: Scan Image
         run: |
-          trivy image --exit-code 0 --severity HIGH,CRITICAL ${{ secrets.DOCKERHUB_USERNAME }}/flask-app:latest
-          trivy image --exit-code 1 --severity CRITICAL ${{ secrets.DOCKERHUB_USERNAME }}/flask-app:latest || echo "⚠️ Critical vulnerabilities found"
+          trivy image ${{ secrets.DOCKERHUB_USERNAME }}/flask-app:latest
 
   deploy:
-    name: Deploy on EC2
     runs-on: self-hosted
     needs: scan
+
     steps:
-      - name: Deploy latest container
+      - name: Deploy Container
         run: |
           docker stop flask-app || true
           docker rm flask-app || true
-          sleep 6
+
           docker pull ${{ secrets.DOCKERHUB_USERNAME }}/flask-app:latest
-          docker run -d --name flask-app -p 5000:5000 ${{ secrets.DOCKERHUB_USERNAME }}/flask-app:latest
-          sleep 6
-          docker system prune -f
+
+          docker run -d --name flask-app -p 5000:5000 \
+          ${{ secrets.DOCKERHUB_USERNAME }}/flask-app:latest
