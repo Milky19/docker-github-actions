@@ -35,11 +35,6 @@ jobs:
     runs-on: self-hosted
     needs: build
 
-    steps:
-      - name: Scan Image
-        run: |
-          trivy image ${{ secrets.DOCKERHUB_USERNAME }}/flask-app:latest
-
   deploy:
     runs-on: self-hosted
     needs: scan
