@@ -69,4 +69,3 @@ jobs:
             ${{ secrets.DOCKERHUB_USERNAME }}/flask-app:latest
           sleep 6
           docker system prune -f
-          
